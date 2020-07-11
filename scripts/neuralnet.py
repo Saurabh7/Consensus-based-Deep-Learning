@@ -1,63 +1,23 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Apr 17 20:46:56 2020
-
 @author: nitin
 """
 
 # Create non-linearly separable data
-
 import numpy as np
-import math
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, mean_squared_error, log_loss
 import random
 import pandas as pd
-
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.datasets import make_blobs
-
-base_dir = "C:/Users/nitin/eclipse-workspace/consensus-deep-learning-version-2.0/data"
 import torch
 import warnings
 import os
 import logging
-import gc
-
-import torch.nn.functional as F
+from scripts.utils.metrics import get_tensors_in_memory, softmax, roc_auc_compute_fn
 warnings.filterwarnings('ignore')
+base_dir = "C:/Users/nitin/eclipse-workspace/consensus-deep-learning-version-2.0/data"
 
 # Todo: data loading should be done in another class
 # Todo: Make each model into a class and pass this into higher NNTrainer class
-
-
-
-def get_tensors_in_memory():
-    tensor_count = 0
-    total_size = 0
-    for obj in gc.get_objects():
-        try:
-            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                total_size += obj.size()
-                tensor_count += 1
-        except:
-            pass
-    return tensor_count, total_size
-        
-
-def softmax(t):
-    return t.exp()/t.exp().sum(-1).unsqueeze(-1)
-    
-def roc_auc_compute_fn(y_preds, y_targets):
-    try:
-        from sklearn.metrics import roc_auc_score
-    except ImportError:
-        raise RuntimeError("This contrib module requires sklearn to be installed.")
-
-    y_true = y_targets.detach().numpy()
-    y_pred = y_preds.detach().numpy()
-    return roc_auc_score(y_true, y_pred)
 
 
 class NeuralNetworkCluster:
@@ -387,9 +347,8 @@ class NeuralNetworkCluster:
         y_pred0 = model0(model0.X_train)        
         # Compute Loss
         loss0 = criterion0(y_pred0.squeeze(), model0.y_train)
-        
-        
-        ## If the abs diff between current loss and previous loss < convergence_epsilon
+
+        # If the abs diff between current loss and previous loss < convergence_epsilon
         if self.neuralNetDict[node_id]["prev_loss"] is None:
             self.neuralNetDict[node_id]["converged_iters"] = 0
         else:
@@ -405,8 +364,7 @@ class NeuralNetworkCluster:
         loss0.backward(retain_graph=True)
         # Update parameters
         optimizer0.step()
-        
-        
+
 
 class SingleLayerNeuralNetwork(torch.nn.Module):
     def __init__(self):
@@ -435,40 +393,7 @@ class SingleLayerNeuralNetwork(torch.nn.Module):
         # Define hidden layer and final layer activastion functions
         self.hidden_act_func = self.get_hidden_act_function()
         self.final_act_func = self.get_final_act_function()
-    
-#     def load_data(self, dataset, base_dir, feature_split, node_id=None):
-#         df_train = pd.read_csv(os.path.join(base_dir,
-#                                       dataset,
-#                                       "feature_split_" + str(feature_split),
-#                                      train_filename), header=None).to_numpy()
-#
-#
-#         df_test = pd.read_csv(os.path.join(base_dir,
-#                                       dataset,
-#                                       "feature_split_" + str(feature_split),
-#                                       test_filename), header=None).to_numpy()
-#
-#
-#         # Split into features and labels
-#         X_train = df_train[:,1:]
-#         y_train = df_train[:,0]
-#
-#         X_test= df_test[:,1:]
-#         y_test = df_test[:,0]
-#
-#
-#         # Map to tensors so torch can use this data
-#         X_train, y_train, X_test, y_test = map(torch.tensor, (X_train, y_train, X_test, y_test))
-#
-#         # Convert features to float and labels to long
-#         self.X_train = X_train.float()
-#         self.y_train = y_train.long()
-#         self.X_test = X_test.float()
-#         self.y_test = y_test.long()
-#
-#
-# #        print(X_train.shape, X_test.shape,
-# #              y_train.shape, y_test.shape)
+
     def get_hidden_act_function(self):
         if self.nn_config_dict["hidden_layer_act"] == "relu":
             return self.relu
@@ -508,7 +433,6 @@ class SingleLayerNeuralNetwork(torch.nn.Module):
         self.y_test = y_test.long()
 
 
-
 class TwoLayerNeuralNetwork(torch.nn.Module):
     def __init__(self):
         self.X_train = None
@@ -537,49 +461,7 @@ class TwoLayerNeuralNetwork(torch.nn.Module):
 
         self.fc2 = torch.nn.Linear(self.hidden_size1, self.hidden_size2)
         self.fc3 = torch.nn.Linear(self.hidden_size2, 2)
-        
-    # def load_data(self, dataset, base_dir, feature_split, node_id=None):
-    #     if node_id is None:
-    #         train_filename = "{}_{}.csv".format(dataset, "train_binary")
-    #         test_filename = "{}_{}.csv".format(dataset, "test_binary")
-    #
-    #     else:
-    #         train_filename = "{}_{}_{}.csv".format(dataset, "train", node_id)
-    #         test_filename = "{}_{}_{}.csv".format(dataset, "test", node_id)
-    #
-    #     df_train = pd.read_csv(os.path.join(base_dir,
-    #                                   dataset,
-    #                                   "feature_split_" + str(feature_split),
-    #                                  train_filename), header=None).to_numpy()
-    #
-    #
-    #     df_test = pd.read_csv(os.path.join(base_dir,
-    #                                   dataset,
-    #                                   "feature_split_" + str(feature_split),
-    #                                   test_filename), header=None).to_numpy()
-    #
-    #
-    #     # Split into features and labels
-    #     X_train = df_train[:,1:]
-    #     y_train = df_train[:,0]
-    #
-    #     X_test= df_test[:,1:]
-    #     y_test = df_test[:,0]
-    #
-    #
-    #     # Map to tensors so torch can use this data
-    #     X_train, y_train, X_test, y_test = map(torch.tensor, (X_train, y_train, X_test, y_test))
-    #
-    #     # Convert features to float and labels to long
-    #     self.X_train = X_train.float()
-    #     self.y_train = y_train.long()
-    #     self.X_test = X_test.float()
-    #     self.y_test = y_test.long()
-    #
-    #
-    #     print(X_train.shape, X_test.shape,
-    #           y_train.shape, y_test.shape)
-        
+
     def get_hidden_act_function(self):
         if self.nn_config_dict["hidden_layer_act"] == "relu":
             return self.relu
@@ -595,8 +477,7 @@ class TwoLayerNeuralNetwork(torch.nn.Module):
             return self.softmax
         else:
             raise ValueError("{} is not a supported hidden layer activation function".format(self.nn_config_dict["final_layer_act"]))
-        
-        
+
     def forward(self, x):
         hidden1 = self.fc1(x)
         act1 = self.hidden_act_func(hidden1)
@@ -608,7 +489,6 @@ class TwoLayerNeuralNetwork(torch.nn.Module):
 
     def set_data(self, df_train_node, train_label, df_test_node, test_label):
         # dataset - load the entire dataset into memory
-        # 
         X_train = df_train_node[[col for col in df_train_node.columns if col != 'label']].values
         y_train = train_label.values
         X_test = df_test_node[[col for col in df_test_node.columns if col != 'label']].values
@@ -651,49 +531,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
         self.fc2 = torch.nn.Linear(self.hidden_size1, self.hidden_size2)
         self.fc3 = torch.nn.Linear(self.hidden_size2, self.hidden_size3)
         self.fc4 = torch.nn.Linear(self.hidden_size2, 2)
-        
-    # def load_data(self, dataset, base_dir, feature_split, node_id=None):
-    #     if node_id is None:
-    #         train_filename = "{}_{}.csv".format(dataset, "train_binary")
-    #         test_filename = "{}_{}.csv".format(dataset, "test_binary")
-    #
-    #     else:
-    #         train_filename = "{}_{}_{}.csv".format(dataset, "train", node_id)
-    #         test_filename = "{}_{}_{}.csv".format(dataset, "test", node_id)
-    #
-    #     df_train = pd.read_csv(os.path.join(base_dir,
-    #                                   dataset,
-    #                                   "feature_split_" + str(feature_split),
-    #                                  train_filename), header=None).to_numpy()
-    #
-    #
-    #     df_test = pd.read_csv(os.path.join(base_dir,
-    #                                   dataset,
-    #                                   "feature_split_" + str(feature_split),
-    #                                   test_filename), header=None).to_numpy()
-    #
-    #
-    #     # Split into features and labels
-    #     X_train = df_train[:,1:]
-    #     y_train = df_train[:,0]
-    #
-    #     X_test= df_test[:,1:]
-    #     y_test = df_test[:,0]
-    #
-    #
-    #     # Map to tensors so torch can use this data
-    #     X_train, y_train, X_test, y_test = map(torch.tensor, (X_train, y_train, X_test, y_test))
-    #
-    #     # Convert features to float and labels to long
-    #     self.X_train = X_train.float()
-    #     self.y_train = y_train.long()
-    #     self.X_test = X_test.float()
-    #     self.y_test = y_test.long()
-    #
-    #
-    #     print(X_train.shape, X_test.shape,
-    #           y_train.shape, y_test.shape)
-        
+
     def get_hidden_act_function(self):
         if self.nn_config_dict["hidden_layer_act"] == "relu":
             return self.relu
@@ -709,8 +547,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
             return self.softmax
         else:
             raise ValueError("{} is not a supported hidden layer activation function".format(self.nn_config_dict["final_layer_act"]))
-        
-        
+
     def forward(self, x):
         hidden1 = self.fc1(x)
         act1 = self.hidden_act_func(hidden1)
@@ -735,6 +572,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
         self.y_train = y_train.long()
         self.X_test = X_test.float()
         self.y_test = y_test.long()
+
 
 def test_cluster():
     nn_cluster = NeuralNetworkCluster()    
@@ -769,84 +607,7 @@ def test_cluster():
     
     print(nn_cluster.neuralNetDict[0]["train_losses"])
     print(nn_cluster.neuralNetDict[1]["train_losses"])
-        
-    
-    
-        
+
+
 if __name__ == "__main__":
     test_cluster()
-#    node_id = 0
-#    neighbor_node_id = 1
-#    
-#    (X_train0, X_test0, y_train0, y_test0) = load_data("arcene", "C:/Users/nitin/eclipse-workspace/consensus-deep-learning-version-2.0/data/", 1, node_id)
-#    (X_train1, X_test1, y_train1, y_test1) = load_data("arcene", "C:/Users/nitin/eclipse-workspace/consensus-deep-learning-version-2.0/data/", 1, neighbor_node_id)
-#    
-#    
-#    
-#    model0 = Feedforward(X_train0.shape[1], 50)
-#    model1 = Feedforward(X_train1.shape[1], 50)
-#    
-#    criterion0 = torch.nn.CrossEntropyLoss()
-#    criterion1 = torch.nn.CrossEntropyLoss()
-#    
-#    optimizer0 = torch.optim.SGD(model0.parameters(), lr = 0.01)
-#    optimizer1 = torch.optim.SGD(model1.parameters(), lr = 0.01)
-#       
-#    print(model0.eval())
-#    print(model1.eval())
-#    
-#    y_pred0 = model0(X_train0)
-#    y_pred1 = model1(X_train1)
-#    
-#    before_train0 = criterion0(y_pred0.squeeze(), y_train0)
-#    before_train1 = criterion1(y_pred1.squeeze(), y_train1)
-#    
-#
-##    y_pred_mean = (y_pred0 + y_pred1)/2
-##    
-##    y_pred_mean = (y_pred0 + y_pred1)/2
-#    
-#
-#    print('Train loss 0 before training' , before_train0.item()) 
-#    print('Train loss 1 before training' , before_train1.item())
-#    
-#    
-#    model0.train()
-#    model1.train()
-#    epoch = 2000
-#    for epoch in range(epoch):
-#        optimizer0.zero_grad()
-#        optimizer1.zero_grad()
-#        # Forward pass
-#        y_pred0 = model0(X_train0)
-#        y_pred1 = model1(X_train1)
-#        
-#        
-#        y_pred0_2 = y_pred0.clone()
-#        y_pred1_2 = y_pred1.clone()
-#        
-#        y_pred_mean0 = (y_pred0 + y_pred1)/2
-#        y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
-#        
-#        
-#        # Compute Loss
-#        loss0 = criterion0(y_pred_mean0.squeeze(), y_train0)
-#        loss1 = criterion1(y_pred_mean1.squeeze(), y_train1)
-#       
-#        # Backward pass
-#        loss0.backward(retain_graph=True)
-#        loss1.backward(retain_graph=True)
-#        optimizer0.step()
-#        optimizer1.step()
-#        print(loss0.item(), loss1.item())
-#        
-#        if epoch % 50 == 0:
-#            # Print test loss
-#            y_pred0 = model0(X_test0)
-#            y_pred1 = model1(X_test1)
-#            test_loss0 = criterion0(y_pred0.squeeze(), y_test0)
-#            test_loss1 = criterion1(y_pred1.squeeze(), y_test1)
-#            
-#            print("TEST LOSSES at epoch {}: {}, {}".format(epoch, test_loss0, test_loss1))
-
-    

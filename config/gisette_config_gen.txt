@@ -1,4 +1,0 @@
-500,10,data/gisette/feature_split_1,6000,1000,100,0.00001,10,0.001,squared,sigmoid,sigmoid,gisette
-500,10,data/gisette/feature_split_2,6000,1000,100,0.00001,10,0.001,squared,sigmoid,sigmoid,gisette
-500,10,data/gisette/feature_split_3,6000,1000,100,0.00001,10,0.001,squared,sigmoid,sigmoid,gisette
-500,1,data/gisette/feature_split_1,6000,1000,100,0.00001,10,0.001,squared,sigmoid,sigmoid,gisette

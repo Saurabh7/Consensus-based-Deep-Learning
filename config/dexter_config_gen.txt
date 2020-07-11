@@ -1,0 +1,4 @@
+500,10,data/dexter/feature_split_1,300,300,5,0.001,10,0.001,squared,sigmoid,sigmoid,dexter
+500,10,data/dexter/feature_split_2,300,300,5,0.001,10,0.001,squared,sigmoid,sigmoid,dexter
+500,10,data/dexter/feature_split_3,300,300,5,0.001,10,0.001,squared,sigmoid,sigmoid,dexter
+500,1,data/dexter/feature_split_1,300,300,5,0.001,10,0.001,squared,sigmoid,sigmoid,dexter

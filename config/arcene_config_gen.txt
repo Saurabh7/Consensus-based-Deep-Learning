@@ -1,0 +1,4 @@
+200,10,data/arcene/feature_split_1,100,100,50,0.0001,10,0.001,squared,sigmoid,sigmoid,arcene
+200,10,data/arcene/feature_split_2,100,100,50,0.0001,10,0.001,squared,sigmoid,sigmoid,arcene
+200,10,data/arcene/feature_split_3,100,100,50,0.0001,10,0.001,squared,sigmoid,sigmoid,arcene
+200,1,data/arcene/feature_split_1,100,100,50,0.0001,10,0.001,squared,sigmoid,sigmoid,arcene

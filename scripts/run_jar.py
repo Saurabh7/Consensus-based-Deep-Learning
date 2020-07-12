@@ -10,7 +10,7 @@ Created on Thu May 28 17:06:45 2020
 import subprocess
 import os
 
-base_config_path ="../config/mnist_balanced/"
+base_config_path ="../config/arcene/"
 config_files = os.listdir(base_config_path)
 
 
@@ -40,7 +40,7 @@ for cid in runnable_config_ids:
 #        sleep(7)
 #        proc1.terminate()
 #        proc2.terminate()
-        subprocess.run(["java", "-jar", "C:\\Users\\nitin\\eclipse-workspace\\consensus-deep-learning-version-2.0\\consensus2.jar",
+        subprocess.run(["java", "-jar", "C:\\Users\\nitin\\eclipse-workspace\\consensus_based_dl_2.0\\consensus2.jar",
                     cpath])
     
 

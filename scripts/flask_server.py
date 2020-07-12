@@ -16,25 +16,26 @@ import io
 from flask import Response
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
-from neuralnet import NeuralNetworkCluster
+from scripts.neuralnet import NeuralNetworkCluster
 import os
 import time
 import torch
 import gc
-from neuralnet import get_tensors_in_memory
 import psutil
 
 os.environ["CUDA_VISIBLE_DEVICES"]=""
 app = Flask(__name__)
 
 # This dictionary will store all the neural networks
-base_dir = "C:/Users/nitin/eclipse-workspace/consensus-deep-learning-version-2.0/data"
+base_dir = "C:/Users/nitin/eclipse-workspace/consensus_based_dl_2.0/data"
 nn_cluster = NeuralNetworkCluster(base_dir)
 run_time = 0
 start_time = 0
 end_time = 0
 tensor_count = 0
 epoch = 0
+save_weights = False
+
 
 def save_results(op_path):
     """
@@ -64,7 +65,7 @@ def plot_png():
 
 @app.route("/vpnn/<command>", methods=['GET','POST'])
 def updateWPProject(command):
-    global nn_cluster, run_time, start_time, end_time, epoch
+    global nn_cluster, run_time, start_time, end_time, epoch, save_weights
     """project_data = user+++++pw+++++pj_jsondoc.
     This will update an existing project data or insert a non-existant project data item."""
     print("Executing {} ".format(command))
@@ -85,10 +86,8 @@ def updateWPProject(command):
                         epoch= 0
                         import gc
                         gc.collect()
-                        
-                        
+
                     if command == "init":
-                        
                         if len(nn_cluster.neuralNetDict) == 0:
                             num_nodes = int(nnconfig_dict["num_nodes"])
 
@@ -96,9 +95,7 @@ def updateWPProject(command):
                         nn_cluster.appendNNToCluster(nnconfig_dict)
                     
                     if command == "train":
-                        
                         epoch += 1
-                        
                         if epoch % 50 == 0:
                             print("GPU MEMORY ALLOCATED at epoch {}: {}".format(epoch, torch.cuda.memory_allocated()))
                             print("CPU MEMORY USED: {}".format(dict(psutil.virtual_memory()._asdict()))) 
@@ -111,7 +108,14 @@ def updateWPProject(command):
                         return jsonify(nn_cluster.neuralNetDict[nnconfig_dict["node_id"]]["converged_flag"])
                         
                     if command == "calc_losses":
+                        epoch += 1
                         nn_cluster.compute_losses_and_accuracies()
+                        # Save weights
+                        if save_weights:
+                            weights_save_dir = os.path.join(base_dir, nnconfig_dict['resourcepath'], 'results', 'weights_{0}'.format(nnconfig_dict['run']))
+                            if not os.path.exists(weights_save_dir):
+                                os.makedirs(weights_save_dir)
+                            nn_cluster.save_linear_layer_weights(weights_save_dir, epoch)
                         
                     if command == "plot":
                         end_time = time.time()
@@ -144,8 +148,8 @@ def updateWPProject(command):
                             nodes = [node_id]*len(train_losses)
                             iters = list(range(len(train_losses)))
                             run_times = [run_time] + [None]*(len(train_losses)-1)
-                            
-                            
+
+                            # Create results dataframe
                             df = pd.DataFrame(data={"node": nodes, "iter": iters, 
                                                     "train_loss": train_losses, "test_loss":test_losses,
                                                     "train_accuracy":train_accuracies, "test_accuracy":test_accuracies,
@@ -168,7 +172,6 @@ def updateWPProject(command):
 #                        shutdown_server()
                         
                     if command == "gossip":
-                        epoch += 1
                         if epoch % 50 == 0:
                             print("GPU MEMORY ALLOCATED at epoch {}: {}".format(epoch, torch.cuda.memory_allocated() ))
                             print("CPU MEMORY USED: {}".format(dict(psutil.virtual_memory()._asdict()))) 

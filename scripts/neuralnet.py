@@ -13,8 +13,10 @@ import warnings
 import os
 import logging
 from scripts.utils.metrics import get_tensors_in_memory, softmax, roc_auc_compute_fn
+import pickle
+
 warnings.filterwarnings('ignore')
-base_dir = "C:/Users/nitin/eclipse-workspace/consensus-deep-learning-version-2.0/data"
+base_dir = "C:/Users/nitin/eclipse-workspace/consensus_based_dl_2.0/data"
 
 # Todo: data loading should be done in another class
 # Todo: Make each model into a class and pass this into higher NNTrainer class
@@ -239,9 +241,8 @@ class NeuralNetworkCluster:
         """
         Stores a pickle file of the NeuralNetworkCluster object
         """
-        
-        import pickle
-        pickle.dump()
+
+        pass
     
     def compute_losses_and_accuracies(self):
         """
@@ -364,6 +365,26 @@ class NeuralNetworkCluster:
         loss0.backward(retain_graph=True)
         # Update parameters
         optimizer0.step()
+
+    def save_linear_layer_weights(self, weights_save_dir, iter):
+        """
+        Saves weights of torch.nn.Linear layers as numpy arrays.
+        :param model:
+        :return:
+        """
+        weights_dict = {}
+        save_path = os.path.join(weights_save_dir, "weights_{}.pkl".format(iter))
+        for key in self.neuralNetDict.keys():
+            model = self.neuralNetDict[key]["model"]
+            linear_layers = [module for module in model.modules() if type(module) == torch.nn.Linear]
+            shapes = []
+            weights_list = []
+            for layer in linear_layers:
+                layer_weights = layer.weight.detach().numpy()
+                shapes.append(layer_weights.shape)
+                weights_list.append(layer_weights)
+            weights_dict[key] = weights_list
+        pickle.dump(weights_dict, open(save_path, "wb"))
 
 
 class SingleLayerNeuralNetwork(torch.nn.Module):

@@ -22,12 +22,14 @@ import time
 import torch
 import gc
 import psutil
-
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 os.environ["CUDA_VISIBLE_DEVICES"]=""
 app = Flask(__name__)
 
 # This dictionary will store all the neural networks
-base_dir = "C:/Users/nitin/eclipse-workspace/consensus_based_dl_2.0/data"
+base_dir =  "/Users/saurabh7/consensus_based_dl_2.0/data"
 nn_cluster = NeuralNetworkCluster(base_dir)
 run_time = 0
 start_time = 0
@@ -68,7 +70,7 @@ def updateWPProject(command):
     global nn_cluster, run_time, start_time, end_time, epoch, save_weights
     """project_data = user+++++pw+++++pj_jsondoc.
     This will update an existing project data or insert a non-existant project data item."""
-    print("Executing {} ".format(command))
+    # print("Executing {} ".format(command))
     if flask.request.method == 'POST':
             nnconfig = flask.request.form['nnconfig']
             
@@ -111,11 +113,11 @@ def updateWPProject(command):
                         epoch += 1
                         nn_cluster.compute_losses_and_accuracies()
                         # Save weights
-                        if save_weights:
-                            weights_save_dir = os.path.join(base_dir, nnconfig_dict['resourcepath'], 'results', 'weights_{0}'.format(nnconfig_dict['run']))
-                            if not os.path.exists(weights_save_dir):
-                                os.makedirs(weights_save_dir)
-                            nn_cluster.save_linear_layer_weights(weights_save_dir, epoch)
+                        # if save_weights:
+                        #     weights_save_dir = os.path.join(base_dir, nnconfig_dict['resourcepath'], 'results', 'weights_{0}'.format(nnconfig_dict['run']))
+                        #     if not os.path.exists(weights_save_dir):
+                        #         os.makedirs(weights_save_dir)
+                        #     nn_cluster.save_linear_layer_weights(weights_save_dir, epoch)
                         
                     if command == "plot":
                         end_time = time.time()
@@ -133,6 +135,7 @@ def updateWPProject(command):
                                                         "train_accuracy", "test_accuracy", "converged_state", "overall_train_accuracy", 
                                                         "overall_test_accuracy", "overall_train_auc", 
                                                         "overall_test_auc", "run_time", "converged_flags"])
+                        
                         for node_id in nn_cluster.neuralNetDict.keys():
                             
                             train_losses = nn_cluster.neuralNetDict[node_id]["train_losses"]
@@ -173,12 +176,13 @@ def updateWPProject(command):
                         
                     if command == "gossip":
                         if epoch % 50 == 0:
-                            print("GPU MEMORY ALLOCATED at epoch {}: {}".format(epoch, torch.cuda.memory_allocated() ))
-                            print("CPU MEMORY USED: {}".format(dict(psutil.virtual_memory()._asdict()))) 
-                            print("Clearing tensors and collecting garbage...")
+                            # print("GPU MEMORY ALLOCATED at epoch {}: {}".format(epoch, torch.cuda.memory_allocated() ))
+                            # print("CPU MEMORY USED: {}".format(dict(psutil.virtual_memory()._asdict()))) 
+                            # print("Clearing tensors and collecting garbage...")
                             import gc
                             gc.collect()
-                            torch.cuda.empty_cache()
+                            # torch.cuda.empty_cache()
+                            
                             
 #                        start_tensors, start_size = get_tensors_in_memory()
 #                        print("Tensors: {}".format(start_tensors))
@@ -188,7 +192,7 @@ def updateWPProject(command):
 
                         # Perform gossip with neighbor's dict as the parameter and update both neural networks
 #                        print("Node {} is gossipping with node {}.".format(nnconfig_dict["node_id"] , neighbor_node_id))
-                        nn_cluster.gossip( nnconfig_dict["node_id"] , neighbor_node_id)
+                        nn_cluster.gossip( nnconfig_dict["node_id"] , neighbor_node_id, epoch)
 #                        end_tensors, end_size = get_tensors_in_memory()
 #                        print("Number of tensors added in compute_losses_and_accuracies: {}, size added: {}".format(end_tensors - start_tensors, end_size-start_size))
                         # Return converged_flag of node_id

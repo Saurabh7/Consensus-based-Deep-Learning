@@ -1,6 +1,6 @@
 import gc
 import torch
-
+import numpy as np
 def get_tensors_in_memory():
     tensor_count = 0
     total_size = 0
@@ -25,6 +25,6 @@ def roc_auc_compute_fn(y_preds, y_targets):
         raise RuntimeError("This contrib module requires sklearn to be installed.")
 
     y_true = y_targets.detach().numpy()
-    y_pred = y_preds.detach().numpy()
+    y_pred = np.nan_to_num(y_preds.detach().numpy())
     return roc_auc_score(y_true, y_pred)
 

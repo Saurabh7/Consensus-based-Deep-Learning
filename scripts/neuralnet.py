@@ -13,11 +13,11 @@ import warnings
 import os
 import logging
 from scripts.utils.metrics import roc_auc_compute_fn
-from scripts.models import SingleLayerNeuralNetwork, TwoLayerNeuralNetwork, ThreeLayerNeuralNetwork
+from scripts.models import SingleLayerNeuralNetwork, TwoLayerNeuralNetwork, ThreeLayerNeuralNetwork, SingleLayerCNN
 import pickle
 
 warnings.filterwarnings('ignore')
-base_dir = "C:/Users/nitin/eclipse-workspace/consensus_based_dl_2.0/data"
+base_dir = "/Users/saurabh7/consensus_based_dl_2.0/data"
 
 # Todo: data loading should be done in another class
 # Todo: Make each model into a class and pass this into higher NNTrainer class
@@ -44,9 +44,12 @@ class NeuralNetworkCluster:
         #
         self.convergence_epsilon = nn_config["convergence_epsilon"]
         self.convergence_iters = nn_config["cycles_for_convergence"]
-        #
+        
         self.df_train = pd.read_csv(os.path.join(self.base_dir, nn_config["dataset_name"], train_filename))
+        print('Overall Shape:', self.df_train.shape)
+
         self.labels_train = self.df_train.pop('label')
+        print('Post pop Shape:', self.df_train.shape)
         self.df_test = pd.read_csv(os.path.join(self.base_dir, nn_config["dataset_name"], test_filename))
         self.labels_test = self.df_test.pop('label')
 
@@ -74,9 +77,18 @@ class NeuralNetworkCluster:
         elif nn_config["feature_split_type"] == "overlap":
             used_indices = []
             num_features = len([col for col in self.df_train.columns if col not in ['label']])
-            num_features_split = int(np.ceil(num_features / float(num_nodes)))
-            num_features_overlap = int(np.ceil(nn_config["overlap_ratio"] * num_features_split))
-            num_features_split = num_features_split - num_features_overlap
+
+            # total_feats = int(num_features / (9*(1-nn_config["overlap_ratio"]) + 1))
+
+
+            
+            num_features_overlap = int(np.ceil(nn_config["overlap_ratio"] * num_features))
+            num_features_split = int(np.ceil((num_features - num_features_overlap) / float(num_nodes)))
+
+            
+            print('Number of total features: {}, Number of features overlap: {}, Number of split features {}'.format(
+                    num_features, num_features_overlap, num_features_split
+                ))
 
             overlap_features = random.sample([i for i in range(num_features)], num_features_overlap)
             used_indices += overlap_features
@@ -85,7 +97,10 @@ class NeuralNetworkCluster:
                 #   num_features_split = num_features - len(used_indices)
 
                 remaining_indices = [i for i in range(num_features) if i not in used_indices]
-                idx = random.sample(remaining_indices, num_features_split)
+                try:
+                    idx = random.sample(remaining_indices, num_features_split)
+                except:
+                    idx = remaining_indices
                 idx_dict[split] = idx + overlap_features
                 used_indices = used_indices + idx
         
@@ -115,26 +130,34 @@ class NeuralNetworkCluster:
         if node_id in self.neuralNetDict.keys():
             logging.info("node_id: {} already exists in dictionary. Overwriting...".format(node_id))
 
-        if nn_config["num_layers"] == 1:
+        if nn_config["nn_type"] == "cnn" and nn_config["num_layers"] == 1:
+            model = SingleLayerCNN()
+            df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
+            df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
+            model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
+            model.initialize(nn_config)            
+
+        elif nn_config["num_layers"] == 1:
             model = SingleLayerNeuralNetwork()
             df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
             df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
             model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
             model.initialize(nn_config)
 
-        if nn_config["num_layers"] == 2:
+        elif nn_config["num_layers"] == 2:
             model = TwoLayerNeuralNetwork()
             df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
             df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
             model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
             model.initialize(nn_config)
 
-        if nn_config["num_layers"] == 3:
+        elif nn_config["num_layers"] == 3:
             model = ThreeLayerNeuralNetwork()
             df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
             df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
             model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
             model.initialize(nn_config)
+    
 
         self.neuralNetDict[node_id]["model"] = model
 
@@ -146,6 +169,7 @@ class NeuralNetworkCluster:
         self.neuralNetDict[node_id]["criterion"] = criterion
 
         # Optimizer
+        # optimizer = torch.optim.Adam(model.parameters(), lr=nn_config["learning_rate"], weight_decay=0.000001)
         optimizer = torch.optim.SGD(model.parameters(), lr=nn_config["learning_rate"])
         self.neuralNetDict[node_id]["optimizer"] = optimizer
 
@@ -170,17 +194,17 @@ class NeuralNetworkCluster:
 #        end_tensors, end_size = get_tensors_in_memory()
 #        print("Number of tensors added in appendNNToCluster: {}, size added: {}".format(end_tensors - start_tensors, end_size-start_size))
         
-    def gossip(self, node_id, neighbor_node_id):
+    def gossip(self, node_id, neighbor_node_id, epoch):
         """
         Performs gossip on two given node_ids.
         """
-        print("Inside gossip")
+        # print("Inside gossip")
 #        start_tensors, start_size = get_tensors_in_memory()
-        if self.neuralNetDict[node_id]["converged_iters"] >= self.convergence_iters:
-            print("Node {} has converged.".format(node_id))
-            self.neuralNetDict[node_id]["converged_flag"] = "true"
-            return
-        print("node_id", node_id)
+        # if self.neuralNetDict[node_id]["converged_iters"] >= self.convergence_iters:
+        #     print("Node {} has converged.".format(node_id))
+        #     self.neuralNetDict[node_id]["converged_flag"] = "true"
+        #     return
+        # print("node_id", node_id)
         model0 = self.neuralNetDict[node_id]["model"]
         model1 = self.neuralNetDict[neighbor_node_id]["model"]
         
@@ -207,24 +231,48 @@ class NeuralNetworkCluster:
         # Compute Loss
         loss0 = criterion0(y_pred_mean0.squeeze(), model0.y_train)
         loss1 = criterion1(y_pred_mean1.squeeze(), model1.y_train)
-        
-        ## If the abs diff between current loss and previous loss < convergence_epsilon
-        if self.neuralNetDict[node_id]["prev_loss"] is None:
-            self.neuralNetDict[node_id]["converged_iters"] = 0
-        else:
-            diff = abs(loss0.item() - self.neuralNetDict[node_id]["prev_loss"])
-            if diff < self.convergence_epsilon:
-                self.neuralNetDict[node_id]["converged_iters"] += 1
+        # test_auc_score = roc_auc_compute_fn(y_pred_mean0[:, 1], model0.y_test) 
+        # ## If the abs diff between current loss and previous loss < convergence_epsilon
+        # if self.neuralNetDict[node_id]["prev_loss"] is None:
+        #     self.neuralNetDict[node_id]["converged_iters"] = 0
+        # else:
+        #     diff = 100
+        #     try:
+        #         # self.neuralNetDict[node_id]["test_losses"][-1] - loss0.item()# 
+        #         diff = test_auc_score - np.min(self.neuralNetDict[node_id]["test_auc"]) 
+        #     except:
+        #         pass
+        #     print(self.convergence_epsilon, node_id, diff, self.neuralNetDict[node_id]["converged_iters"], diff < self.convergence_epsilon)
+        #     if diff < self.convergence_epsilon:# and len(self.neuralNetDict[node_id]["test_losses"]) > self.convergence_iters*2:
+        #         self.neuralNetDict[node_id]["converged_iters"] += 1
                 
-            else:
-                self.neuralNetDict[node_id]["converged_iters"] = 0
-        self.neuralNetDict[node_id]["prev_loss"] = loss0.item()
+        #     else:
+        #         self.neuralNetDict[node_id]["converged_iters"] = 0
+        # self.neuralNetDict[node_id]["prev_loss"] = loss0.item()
         # Backward pass
         loss0.backward(retain_graph=True)
         loss1.backward(retain_graph=True)
         
         optimizer0.step()
         optimizer1.step()
+
+        # y_pred_test = model0(model0.X_test)
+        # y_true_test = model0.y_test
+
+        # test_loss = criterion0(y_pred_test.squeeze(), y_true_test)
+        # diff = 100
+        # try:
+        #     diff = np.min(np.nan_to_num(self.neuralNetDict[node_id]["test_losses"])) - test_loss.item()
+        # except:
+        #     pass
+
+        # if diff < self.convergence_epsilon:
+        #     self.neuralNetDict[node_id]["converged_iters"] += 1
+        # else:
+        #     self.neuralNetDict[node_id]["converged_iters"] = 0
+
+        # print(epoch, diff, self.neuralNetDict[node_id]["converged_iters"])
+
 #        
 #        # Clear all local variables
 #        del y_pred0, y_pred1, y_pred0_2, y_pred1_2
@@ -249,13 +297,13 @@ class NeuralNetworkCluster:
         """
         Computes train and test losses for all the nodes.
         """
-        print("Inside compute_losses_and_accuracies")
+        # print("Inside compute_losses_and_accuracies")
 #        start_tensors, start_size = get_tensors_in_memory()
         
         y_pred_train_agg = []
         y_pred_test_agg= []
-        print("Calculating losses: ")
-        
+        # print("Calculating losses: ")
+        losses = []
         for node_id in self.neuralNetDict.keys():
             model = self.neuralNetDict[node_id]["model"]
             criterion = self.neuralNetDict[node_id]["criterion"]        
@@ -281,7 +329,7 @@ class NeuralNetworkCluster:
             test_output = (y_pred_test[:, 1]>0.5).float()
             test_correct = (test_output == model.y_test).float().sum()
             test_accuracy = test_correct/model.X_test.shape[0]
-
+            losses.append(test_loss.item())
             test_auc_score = roc_auc_compute_fn(y_pred_test[:, 1], model.y_test) 
             self.neuralNetDict[node_id]["test_losses"].append(test_loss.item())
             self.neuralNetDict[node_id]["test_accuracy"].append(test_accuracy.item())
@@ -313,7 +361,8 @@ class NeuralNetworkCluster:
         overall_test_auc = roc_auc_compute_fn(y_pred_test_agg_pyt, model.y_test)
         
         
-        print("Overall Train AUC: {}, Overall Test AUC: {}".format(overall_train_auc.item(), overall_test_auc.item()))
+        print("Overall Train AUC: {}, Overall Test AUC: {}, Mean Test Loss: {}".format(
+            overall_train_auc.item(), overall_test_auc.item(), np.mean(losses)))
         for node_id in self.neuralNetDict.keys():
             self.neuralNetDict[node_id]["overall_train_accuracy"].append(overall_train_accuracy.item())
             self.neuralNetDict[node_id]["overall_test_accuracy"].append(overall_test_accuracy.item())
@@ -335,10 +384,10 @@ class NeuralNetworkCluster:
         No gossip is performed here.
         """
         
-        if self.neuralNetDict[node_id]["converged_iters"] >= self.convergence_iters:
-            print("Node {} has converged.".format(node_id))
-            self.neuralNetDict[node_id]["converged_flag"] = "true"
-            return
+        # if self.neuralNetDict[node_id]["converged_iters"] >= self.convergence_iters:
+        #     print("Node {} has converged.".format(node_id))
+        #     self.neuralNetDict[node_id]["converged_flag"] = "true"
+        #     return
         print("node_id", node_id)
         model0 = self.neuralNetDict[node_id]["model"]
         criterion0 = self.neuralNetDict[node_id]["criterion"]        
@@ -351,21 +400,38 @@ class NeuralNetworkCluster:
         loss0 = criterion0(y_pred0.squeeze(), model0.y_train)
 
         # If the abs diff between current loss and previous loss < convergence_epsilon
-        if self.neuralNetDict[node_id]["prev_loss"] is None:
-            self.neuralNetDict[node_id]["converged_iters"] = 0
-        else:
-            diff = abs(loss0.item() - self.neuralNetDict[node_id]["prev_loss"])
-            if diff < self.convergence_epsilon:
-                self.neuralNetDict[node_id]["converged_iters"] += 1
+        # if self.neuralNetDict[node_id]["prev_loss"] is None:
+        #     self.neuralNetDict[node_id]["converged_iters"] = 0
+        # else:
+        #     diff = abs(loss0.item() - self.neuralNetDict[node_id]["prev_loss"])
+        #     if diff < self.convergence_epsilon:
+        #         self.neuralNetDict[node_id]["converged_iters"] += 1
                 
-            else:
-                self.neuralNetDict[node_id]["converged_iters"] = 0
-        self.neuralNetDict[node_id]["prev_loss"] = loss0.item()
+        #     else:
+        #         self.neuralNetDict[node_id]["converged_iters"] = 0
+        # self.neuralNetDict[node_id]["prev_loss"] = loss0.item()
 
         # Backward pass
         loss0.backward(retain_graph=True)
         # Update parameters
         optimizer0.step()
+
+        # y_pred_test = model0(model0.X_test)
+        # y_true_test = model0.y_test
+
+        # test_loss = criterion0(y_pred_test.squeeze(), y_true_test)
+        # diff = 100
+        # try:
+        #     diff = np.min(np.nan_to_num(self.neuralNetDict[node_id]["test_losses"])) - test_loss.item()
+        # except:
+        #     pass
+
+        # if diff < self.convergence_epsilon:
+        #     self.neuralNetDict[node_id]["converged_iters"] += 1
+        # else:
+        #     self.neuralNetDict[node_id]["converged_iters"] = 0
+        
+        # print(diff, diff < self.convergence_epsilon, self.neuralNetDict[node_id]["converged_iters"])
 
     def save_linear_layer_weights(self, weights_save_dir, iter):
         """

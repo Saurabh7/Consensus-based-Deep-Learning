@@ -79,27 +79,96 @@ def load_config_gen_file(path):
 
 def generate_configs_from_dict():
     
-    params_dict = {"learning_rate": [0.001],
+    mnist_params_dict = {"learning_rate": [0.05],
                    "batch_size": [1],
                    "init_method":[0],
-                   "numhidden_1":[50],
+                   "numhidden_1":[10],
                    "numhidden_2": [20],
                    "numhidden_3": [10],
-                   "cycles_for_convergence":[50000],
-                   "convergence_epsilon":[0.0001],
+                   "cycles_for_convergence":[30],
+                   "convergence_epsilon":[0.001],
                    "random.seed":[10],
                    "loss_function": ["cross_entropy"],
                    "hidden_layer_act": ["relu"],
                    "final_layer_act": ["softmax"],
-                   "feature_split_type": ["random"],
+                   "feature_split_type": ["random", "overlap"],
                    "overlap_ratio":[0],
                    "nn_type":["mlp"],
                    "num_layers":[2],
                    "dataset_name":["mnist_balanced"],
                    "network.size": [10],
-                   "simulation.cycles": [4000],
+                   "simulation.cycles": [2000],
                    "degree":[2]
                    }
+
+    dorothea_params_dict = {"learning_rate": [0.5],
+                   "batch_size": [1],
+                   "init_method":[0],
+                   "numhidden_1":[10],
+                   "numhidden_2": [10],
+                   "numhidden_3": [10],
+                   "cycles_for_convergence":[25],
+                   "convergence_epsilon":[0.00001],
+                   "random.seed":[10],
+                   "loss_function": ["cross_entropy"],
+                   "hidden_layer_act": ["relu"],
+                   "final_layer_act": ["softmax"],
+                   "feature_split_type": ["random", "overlap"],
+                   "overlap_ratio":[0],
+                   "nn_type":["mlp"],
+                   "num_layers":[2],
+                   "dataset_name":["dorothea_balanced"],
+                   "network.size": [10],
+                   "simulation.cycles": [2000],
+                   "degree":[2]
+                   }
+
+    dexter_params_dict = {"learning_rate": [0.1],
+                   "batch_size": [1],
+                   "init_method":[0],
+                   "numhidden_1":[2],
+                   "numhidden_2": [20],
+                   "numhidden_3": [10],
+                   "cycles_for_convergence":[50000],
+                   "convergence_epsilon":[0.1],
+                   "random.seed":[10],
+                   "loss_function": ["cross_entropy"],
+                   "hidden_layer_act": ["relu"],
+                   "final_layer_act": ["softmax"],
+                   "feature_split_type": ["random", "overlap"],
+                   "overlap_ratio":[0],
+                   "nn_type":["mlp"],
+                   "num_layers":[1],
+                   "dataset_name":["dexter"],
+                   "network.size": [10],
+                   "simulation.cycles": [2000],
+                   "degree":[2]
+                   }
+
+    arcene_params_dict = {"learning_rate": [0.01],
+                   "batch_size": [1],
+                   "init_method":[0],
+                   "numhidden_1":[5],
+                   "numhidden_2": [20],
+                   "numhidden_3": [10],
+                   "cycles_for_convergence":[50000],
+                   "convergence_epsilon":[0.1],
+                   "random.seed":[10],
+                   "loss_function": ["cross_entropy"],
+                   "hidden_layer_act": ["relu"],
+                   "final_layer_act": ["softmax"],
+                   "feature_split_type": ["random", "overlap"],
+                   "overlap_ratio":[0],
+                   "nn_type":["mlp"],
+                   "num_layers":[1],
+                   "dataset_name":["arcene"],
+                   "network.size": [10],
+                   "simulation.cycles": [2000],
+                   "degree":[2]
+                   }
+
+    params_dict = dorothea_params_dict.copy()
+
     from itertools import product
     keys, values = zip(*params_dict.items())
     all_perms = [dict(zip(keys, v)) for v in product(*values)]
@@ -120,9 +189,17 @@ def generate_configs_from_dict():
 
             perm["run"] = run_dict[perm["dataset_name"]]
             perm["resourcepath"] = perm["dataset_name"]
+            original_hidden_1 = perm["numhidden_1"]
+            original_hidden_2 = perm["numhidden_2"]
             if perm["feature_split_type"] == "overlap":
-                perm["overlap_ratio"] = 0.2
-            updated_perms.append(perm)
+                for ratio in [0.2,0.4,0.6,0.8,1]:
+                  perm["numhidden_1"] = int(original_hidden_1)
+                  perm["numhidden_2"] = int(original_hidden_2)
+                  perm["overlap_ratio"] = ratio
+                  perm["run"] =  perm["run"] + 1
+                  updated_perms.append(perm.copy())
+            else:
+              updated_perms.append(perm.copy())
     
     
 #    params_dict_1h = {"learning_rate": [0.01, 0.0001],
@@ -193,7 +270,7 @@ def generate_configs_from_dict():
 
 if __name__ == "__main__":
     perms, run_dict = generate_configs_from_dict()
-    
+    print(perms, run_dict)
 #    args = load_args()
 #    config_dict = load_config_gen_file(args.config_gen_file)
 #    
@@ -208,6 +285,7 @@ if __name__ == "__main__":
         os.makedirs(op_dir)
         
     for perm in perms:
+        # print(perm)
         base_config_lines = load_base_config("../config/base_config.cfg")
         updated_config = append_to_base_config(base_config_lines, perm)
         

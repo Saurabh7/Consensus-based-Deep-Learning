@@ -148,6 +148,8 @@ def updateWPProject(command):
                             overall_train_aucs = nn_cluster.neuralNetDict[node_id]["overall_train_auc"]
                             overall_test_aucs = nn_cluster.neuralNetDict[node_id]["overall_test_auc"]
                             converged_flags = nn_cluster.neuralNetDict[node_id]["converged_flags"]
+                            fc1_weight = nn_cluster.neuralNetDict[node_id]["fc1_weight"]
+
                             nodes = [node_id]*len(train_losses)
                             iters = list(range(len(train_losses)))
                             run_times = [run_time] + [None]*(len(train_losses)-1)
@@ -162,7 +164,9 @@ def updateWPProject(command):
                                                     "overall_train_auc": overall_train_aucs,
                                                     "overall_test_auc": overall_test_aucs,
                                                     "run_time": run_times,
-                                                    "converged_flags": converged_flags})
+                                                    "converged_flags": converged_flags,
+                                                    "fc1_weight": fc1_weight
+                                                    })
                             loss_df = loss_df.append(df)
                             
                         o_path = os.path.join(base_dir, nnconfig_dict['resourcepath'], 'results')

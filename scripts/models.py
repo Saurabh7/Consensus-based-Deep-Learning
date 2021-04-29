@@ -91,12 +91,13 @@ class SingleLayerCNN(torch.nn.Module):
 
 
 class SingleLayerNeuralNetwork(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, n_classes=2):
         self.X_train = None
         self.y_train = None
         self.X_test = None
         self.y_test = None
         self.nn_config_dict = {}
+        self.n_classes = n_classes
 
     def initialize(self, nn_config_dict):
         self.nn_config_dict = nn_config_dict
@@ -104,6 +105,7 @@ class SingleLayerNeuralNetwork(torch.nn.Module):
         self.input_size = self.X_train.shape[1]
         self.hidden_size  = nn_config_dict["numhidden_1"]
         self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
+        #torch.nn.init.kaiming_normal_(self.fc1.weight, nonlinearity='relu')
 
         # Define the activation functions to be used
         self.tanh = torch.nn.Tanh()
@@ -113,7 +115,7 @@ class SingleLayerNeuralNetwork(torch.nn.Module):
         # self.batchnorm1 = torch.nn.BatchNorm1d(self.hidden_size)
         self.dropout = torch.nn.Dropout(p=0.1)
 
-        self.fc2 = torch.nn.Linear(self.hidden_size, 2)
+        self.fc2 = torch.nn.Linear(self.hidden_size, self.n_classes)
         # Define hidden layer and final layer activastion functions
         self.hidden_act_func = self.get_hidden_act_function()
         self.final_act_func = self.get_final_act_function()
@@ -160,13 +162,13 @@ class SingleLayerNeuralNetwork(torch.nn.Module):
 
 
 class TwoLayerNeuralNetwork(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, n_classes=2):
         self.X_train = None
         self.y_train = None
         self.X_test = None
         self.y_test = None
         self.nn_config_dict = {}
-
+        self.n_classes = n_classes
     def initialize(self, nn_config_dict):
         self.nn_config_dict = nn_config_dict
         super(TwoLayerNeuralNetwork, self).__init__()
@@ -187,7 +189,7 @@ class TwoLayerNeuralNetwork(torch.nn.Module):
         self.final_act_func = self.get_final_act_function()
 
         self.fc2 = torch.nn.Linear(self.hidden_size1, self.hidden_size2)
-        self.fc3 = torch.nn.Linear(self.hidden_size2, 2)
+        self.fc3 = torch.nn.Linear(self.hidden_size2, self.n_classes)
 
     def get_hidden_act_function(self):
         if self.nn_config_dict["hidden_layer_act"] == "relu":
@@ -231,7 +233,7 @@ class TwoLayerNeuralNetwork(torch.nn.Module):
 
 
 class ThreeLayerNeuralNetwork(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, n_classes=2):
         self.X_train = None
         self.y_train = None
         self.X_test = None
@@ -259,7 +261,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
 
         self.fc2 = torch.nn.Linear(self.hidden_size1, self.hidden_size2)
         self.fc3 = torch.nn.Linear(self.hidden_size2, self.hidden_size3)
-        self.fc4 = torch.nn.Linear(self.hidden_size2, 2)
+        self.fc4 = torch.nn.Linear(self.hidden_size3, 2)
 
     def get_hidden_act_function(self):
         if self.nn_config_dict["hidden_layer_act"] == "relu":

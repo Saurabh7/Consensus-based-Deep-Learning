@@ -24,7 +24,13 @@ def roc_auc_compute_fn(y_preds, y_targets):
     except ImportError:
         raise RuntimeError("This contrib module requires sklearn to be installed.")
 
-    y_true = y_targets.detach().numpy()
-    y_pred = np.nan_to_num(y_preds.detach().numpy())
-    return roc_auc_score(y_true, y_pred)
+    y_true = y_targets#.detach().numpy()
+    nunique = len(np.unique(y_true)) 
+    y_pred = np.nan_to_num(y_preds)
+
+    if nunique > 2:
+        from sklearn.metrics import accuracy_score
+        return accuracy_score(y_true, y_pred)
+    else:
+        return roc_auc_score(y_true, y_pred)
 

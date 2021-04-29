@@ -47,8 +47,10 @@ class NeuralNetworkCluster:
         
         self.df_train = pd.read_csv(os.path.join(self.base_dir, nn_config["dataset_name"], train_filename))
         print('Overall Shape:', self.df_train.shape)
+        self.n_classes = self.df_train.label.nunique()
 
         self.labels_train = self.df_train.pop('label')
+
         print('Post pop Shape:', self.df_train.shape)
         self.df_test = pd.read_csv(os.path.join(self.base_dir, nn_config["dataset_name"], test_filename))
         self.labels_test = self.df_test.pop('label')
@@ -66,6 +68,9 @@ class NeuralNetworkCluster:
 
                 remaining_indices = [i for i in range(num_features) if i not in used_indices]
                 print(len(used_indices), len(remaining_indices))
+                if not remaining_indices:
+                    idx_dict[split] = idx_dict[0]
+                    continue
                 try:
                     idx = random.sample(remaining_indices, num_features_split)
                 except ValueError:
@@ -138,21 +143,21 @@ class NeuralNetworkCluster:
             model.initialize(nn_config)            
 
         elif nn_config["num_layers"] == 1:
-            model = SingleLayerNeuralNetwork()
+            model = SingleLayerNeuralNetwork(n_classes = self.n_classes)
             df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
             df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
             model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
             model.initialize(nn_config)
 
         elif nn_config["num_layers"] == 2:
-            model = TwoLayerNeuralNetwork()
+            model = TwoLayerNeuralNetwork(n_classes = self.n_classes)
             df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
             df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
             model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
             model.initialize(nn_config)
 
         elif nn_config["num_layers"] == 3:
-            model = ThreeLayerNeuralNetwork()
+            model = ThreeLayerNeuralNetwork(n_classes = self.n_classes)
             df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
             df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
             model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
@@ -172,7 +177,8 @@ class NeuralNetworkCluster:
         # optimizer = torch.optim.Adam(model.parameters(), lr=nn_config["learning_rate"], weight_decay=0.000001)
         optimizer = torch.optim.SGD(model.parameters(), lr=nn_config["learning_rate"])
         self.neuralNetDict[node_id]["optimizer"] = optimizer
-
+        
+        self.neuralNetDict[node_id]["fc1_weight"] = []
         self.neuralNetDict[node_id]["train_losses"] = []
         self.neuralNetDict[node_id]["train_accuracy"] = []
         self.neuralNetDict[node_id]["test_losses"] = []
@@ -227,10 +233,13 @@ class NeuralNetworkCluster:
         
         y_pred_mean0 = (y_pred0 + y_pred1)/2
         y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
-        
+        # print('SHAPES', y_pred_mean0.shape, y_pred_mean1.shape)
         # Compute Loss
         loss0 = criterion0(y_pred_mean0.squeeze(), model0.y_train)
         loss1 = criterion1(y_pred_mean1.squeeze(), model1.y_train)
+
+        # temp = criterion0(y_pred0.squeeze(), model0.y_train)
+        # print('TEMP', temp.item())
         # test_auc_score = roc_auc_compute_fn(y_pred_mean0[:, 1], model0.y_test) 
         # ## If the abs diff between current loss and previous loss < convergence_epsilon
         # if self.neuralNetDict[node_id]["prev_loss"] is None:
@@ -313,24 +322,40 @@ class NeuralNetworkCluster:
 #            print(type(y_pred_train))
             y_pred_train = y_pred_train.squeeze()
             train_loss = criterion(y_pred_train, model.y_train) 
-            train_output = (y_pred_train[:, 1]>0.5).float()
-            train_correct = (train_output == model.y_train).float().sum()
+            train_output = np.argmax(y_pred_train.detach().numpy(), axis=1)#.float()#[:, 1]>0.5).float()
+            print('loss', train_loss.item())
+            # print('Y Pred TRAIN', y_pred_train.shape, train_output.shape)
+
+            train_correct = np.equal(train_output, model.y_train).sum()
             train_accuracy = train_correct/model.X_train.shape[0]
             
-            train_auc_score = roc_auc_compute_fn(y_pred_train[:, 1], model.y_train)
+            if self.n_classes <= 2:
+
+                train_auc_score = roc_auc_compute_fn(y_pred_train[:, 1], model.y_train)
+            else:
+                train_auc_score = train_accuracy
+
             self.neuralNetDict[node_id]["train_losses"].append(train_loss.item())
             self.neuralNetDict[node_id]["train_accuracy"].append(train_accuracy.item())
             self.neuralNetDict[node_id]["train_auc"].append(train_auc_score.item())
-            
+            # print('Shape:', model.fc1.weight.shape)
+            self.neuralNetDict[node_id]["fc1_weight"].append(torch.square(model.fc1.weight).sum().item())
+            print(node_id, self.neuralNetDict[node_id]["fc1_weight"][-1])
             # Compute Test Loss
             y_pred_test = model(model.X_test)
             y_pred_test = y_pred_test.squeeze()
             test_loss = criterion(y_pred_test, model.y_test)
-            test_output = (y_pred_test[:, 1]>0.5).float()
-            test_correct = (test_output == model.y_test).float().sum()
+            test_output = np.argmax(y_pred_test.detach().numpy(), axis=1)
+
+            test_correct = np.equal(test_output, model.y_test).sum()
             test_accuracy = test_correct/model.X_test.shape[0]
             losses.append(test_loss.item())
-            test_auc_score = roc_auc_compute_fn(y_pred_test[:, 1], model.y_test) 
+
+            if self.n_classes <= 2:
+                test_auc_score = roc_auc_compute_fn(y_pred_test[:, 1], model.y_test) 
+            else:
+                test_auc_score = test_accuracy
+
             self.neuralNetDict[node_id]["test_losses"].append(test_loss.item())
             self.neuralNetDict[node_id]["test_accuracy"].append(test_accuracy.item())
             self.neuralNetDict[node_id]["test_auc"].append(test_auc_score.item())
@@ -339,27 +364,36 @@ class NeuralNetworkCluster:
             self.neuralNetDict[node_id]["converged_flags"].append(self.neuralNetDict[node_id]["converged_flag"])
             
 
-            y_pred_train_agg.append(y_pred_train[:,1].float())
-            y_pred_test_agg.append(y_pred_test[:,1].float())
+            y_pred_train_agg.append(y_pred_train.detach().numpy())
+            y_pred_test_agg.append(y_pred_test.detach().numpy())
             
 #            del y_pred_train, train_loss, train_output, train_correct, train_accuracy, train_auc_score
 #            del y_pred_test, test_loss, test_output, test_correct, test_accuracy, test_auc_score
         
         # Obtain average predictions
-        y_pred_train_agg_pyt = torch.stack(y_pred_train_agg, 0)
-        y_pred_train_agg_pyt = torch.mean(y_pred_train_agg_pyt, 0)
-        overall_train_output = (y_pred_train_agg_pyt>0.5).float()
-        overall_train_correct = (overall_train_output == model.y_train).float().sum()
-        overall_train_accuracy = overall_train_correct/model.X_train.shape[0]
-        overall_train_auc = roc_auc_compute_fn(y_pred_train_agg_pyt, model.y_train)
+        y_pred_train_agg_pyt = np.sum(y_pred_train_agg, axis=0) / len(y_pred_train_agg)
+        # print('SHAPE of average', y_pred_train_agg_pyt.shape)
 
-        y_pred_test_agg_pyt = torch.stack(y_pred_test_agg, 0)
-        y_pred_test_agg_pyt = torch.mean(y_pred_test_agg_pyt, 0)
-        overall_test_output = (y_pred_test_agg_pyt>0.5).float()
-        overall_test_correct = (overall_test_output == model.y_test).float().sum()
+        # y_pred_train_agg_pyt = torch.stack(y_pred_train_agg, 0)
+        # y_pred_train_agg_pyt = torch.mean(y_pred_train_agg_pyt, 0)
+        overall_train_output = np.argmax(y_pred_train_agg_pyt, axis=1)#(y_pred_train_agg_pyt>0.5).float()
+        overall_train_correct = np.equal(overall_train_output, model.y_train).sum()
+        overall_train_accuracy = overall_train_correct/model.X_train.shape[0]
+        if self.n_classes <= 2:
+            overall_train_auc = roc_auc_compute_fn(y_pred_train_agg_pyt, model.y_train)
+        else:
+            overall_train_auc = overall_train_accuracy
+
+        y_pred_test_agg_pyt = np.sum(y_pred_test_agg, axis=0) / len(y_pred_test_agg) #torch.stack(y_pred_test_agg, 0)
+        # y_pred_test_agg_pyt = torch.mean(y_pred_test_agg_pyt, 0)
+        overall_test_output = np.argmax(y_pred_test_agg_pyt, axis=1)#>0.5).float()
+        overall_test_correct = np.equal(overall_test_output, model.y_test).sum()
         overall_test_accuracy = overall_test_correct/model.X_test.shape[0]
-        overall_test_auc = roc_auc_compute_fn(y_pred_test_agg_pyt, model.y_test)
-        
+
+        if self.n_classes <= 2:
+            overall_test_auc = roc_auc_compute_fn(y_pred_test_agg_pyt, model.y_test)
+        else:
+            overall_test_auc = overall_test_accuracy
         
         print("Overall Train AUC: {}, Overall Test AUC: {}, Mean Test Loss: {}".format(
             overall_train_auc.item(), overall_test_auc.item(), np.mean(losses)))

@@ -323,7 +323,7 @@ class NeuralNetworkCluster:
             y_pred_train = y_pred_train.squeeze()
             train_loss = criterion(y_pred_train, model.y_train) 
             train_output = np.argmax(y_pred_train.detach().numpy(), axis=1)#.float()#[:, 1]>0.5).float()
-            print('loss', train_loss.item())
+            # print('loss', train_loss.item())
             # print('Y Pred TRAIN', y_pred_train.shape, train_output.shape)
 
             train_correct = np.equal(train_output, model.y_train).sum()
@@ -340,7 +340,7 @@ class NeuralNetworkCluster:
             self.neuralNetDict[node_id]["train_auc"].append(train_auc_score.item())
             # print('Shape:', model.fc1.weight.shape)
             self.neuralNetDict[node_id]["fc1_weight"].append(torch.square(model.fc1.weight).sum().item())
-            print(node_id, self.neuralNetDict[node_id]["fc1_weight"][-1])
+            # print(node_id, self.neuralNetDict[node_id]["fc1_weight"][-1])
             # Compute Test Loss
             y_pred_test = model(model.X_test)
             y_pred_test = y_pred_test.squeeze()

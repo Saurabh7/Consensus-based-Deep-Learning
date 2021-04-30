@@ -239,7 +239,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
         self.X_test = None
         self.y_test = None
         self.nn_config_dict = {}
-
+        self.n_classes = n_classes
     def initialize(self, nn_config_dict):
         self.nn_config_dict = nn_config_dict
         super(ThreeLayerNeuralNetwork, self).__init__()
@@ -261,7 +261,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
 
         self.fc2 = torch.nn.Linear(self.hidden_size1, self.hidden_size2)
         self.fc3 = torch.nn.Linear(self.hidden_size2, self.hidden_size3)
-        self.fc4 = torch.nn.Linear(self.hidden_size3, 2)
+        self.fc4 = torch.nn.Linear(self.hidden_size3, self.n_classes)
 
     def get_hidden_act_function(self):
         if self.nn_config_dict["hidden_layer_act"] == "relu":

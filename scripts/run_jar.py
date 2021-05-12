@@ -10,7 +10,7 @@ Created on Thu May 28 17:06:45 2020
 import subprocess
 import os
 
-for dataset in ['mnist_balanced', 'arcene']:#['arcene', 'dexter', 'gisette', 'madelon', 'HT', 'mnist_balanced', 'dorothea_balanced']:
+for dataset in ['cifar10']:#['arcene', 'dexter', 'gisette', 'madelon', 'HT', 'mnist_balanced', 'dorothea_balanced']:
 	base_config_path ="../config/{}/".format(dataset)
 	config_files = os.listdir(base_config_path)
 
@@ -32,7 +32,7 @@ for dataset in ['mnist_balanced', 'arcene']:#['arcene', 'dexter', 'gisette', 'ma
 
 	print("Completed: {}".format(completed_result_ids))
 
-	runnable_config_ids = [cid for cid in config_ids if int(cid) in [6,7,8,9,10]]#10,11,12,13,14,15]]#config_ids.difference(completed_result_ids)
+	runnable_config_ids = [cid for cid in config_ids if int(cid) in [1,2,7,12]]#config_ids.difference(completed_result_ids)
 
 	config_paths = [os.path.join(base_config_path, f) for f in config_files]
 	for cid in runnable_config_ids:
@@ -48,7 +48,7 @@ for dataset in ['mnist_balanced', 'arcene']:#['arcene', 'dexter', 'gisette', 'ma
 	#        sleep(7)
 	#        proc1.terminate()
 	#        proc2.terminate()
-	        subprocess.run(["java", "-jar", "/Users/saurabh7/Downloads/consensus2.jar",
+	        subprocess.run(["java", "-jar", "/home/ubuntu/consensus2.jar",
 	                    cpath])
     
 

@@ -13,11 +13,11 @@ import warnings
 import os
 import logging
 from scripts.utils.metrics import roc_auc_compute_fn
-from scripts.models import SingleLayerNeuralNetwork, TwoLayerNeuralNetwork, ThreeLayerNeuralNetwork, SingleLayerCNN
+from scripts.models import SingleLayerNeuralNetwork, TwoLayerNeuralNetwork, ThreeLayerNeuralNetwork,FourLayerNeuralNetwork, SingleLayerCNN
 import pickle
 
 warnings.filterwarnings('ignore')
-base_dir = "/Users/saurabh7/consensus_based_dl_2.0/data"
+base_dir = "/home/ubuntu/consensus_based_dl/data"
 
 # Todo: data loading should be done in another class
 # Todo: Make each model into a class and pass this into higher NNTrainer class
@@ -158,6 +158,12 @@ class NeuralNetworkCluster:
 
         elif nn_config["num_layers"] == 3:
             model = ThreeLayerNeuralNetwork(n_classes = self.n_classes)
+            df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
+            df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
+            model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
+            model.initialize(nn_config)
+        else:
+            model = FourLayerNeuralNetwork(n_classes = self.n_classes)
             df_train_node = self.df_train.iloc[:, self.feature_dict[node_id]]
             df_test_node = self.df_test.iloc[:, self.feature_dict[node_id]]
             model.set_data(df_train_node, self.labels_train, df_test_node, self.labels_test)
@@ -325,7 +331,7 @@ class NeuralNetworkCluster:
             train_output = np.argmax(y_pred_train.detach().numpy(), axis=1)#.float()#[:, 1]>0.5).float()
             # print('loss', train_loss.item())
             # print('Y Pred TRAIN', y_pred_train.shape, train_output.shape)
-
+            losses.append(train_loss.item())
             train_correct = np.equal(train_output, model.y_train).sum()
             train_accuracy = train_correct/model.X_train.shape[0]
             
@@ -349,7 +355,7 @@ class NeuralNetworkCluster:
 
             test_correct = np.equal(test_output, model.y_test).sum()
             test_accuracy = test_correct/model.X_test.shape[0]
-            losses.append(test_loss.item())
+            #losses.append(test_loss.item())
 
             if self.n_classes <= 2:
                 test_auc_score = roc_auc_compute_fn(y_pred_test[:, 1], model.y_test) 
@@ -423,15 +429,20 @@ class NeuralNetworkCluster:
         #     self.neuralNetDict[node_id]["converged_flag"] = "true"
         #     return
         print("node_id", node_id)
+        print("centralized training")
         model0 = self.neuralNetDict[node_id]["model"]
         criterion0 = self.neuralNetDict[node_id]["criterion"]        
         optimizer0 = self.neuralNetDict[node_id]["optimizer"]        
         # Wipe gradients of both optimizer
-        optimizer0.zero_grad()
+        #print(model0.y_train.shape)
+        for idx, row in enumerate(model0.X_train):
+            optimizer0.zero_grad()
         # Forward pass
-        y_pred0 = model0(model0.X_train)        
+            y_pred0 = model0(row.reshape(-1, model0.X_train.shape[1]))        
         # Compute Loss
-        loss0 = criterion0(y_pred0.squeeze(), model0.y_train)
+            loss0 = criterion0(y_pred0, model0.y_train[idx].unsqueeze(0))
+            loss0.backward()
+            optimizer0.step()
 
         # If the abs diff between current loss and previous loss < convergence_epsilon
         # if self.neuralNetDict[node_id]["prev_loss"] is None:
@@ -446,9 +457,9 @@ class NeuralNetworkCluster:
         # self.neuralNetDict[node_id]["prev_loss"] = loss0.item()
 
         # Backward pass
-        loss0.backward(retain_graph=True)
+        #loss0.backward()#retain_graph=True)
         # Update parameters
-        optimizer0.step()
+        #optimizer0.step()
 
         # y_pred_test = model0(model0.X_test)
         # y_true_test = model0.y_test

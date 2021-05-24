@@ -17,7 +17,7 @@ from scripts.models import SingleLayerNeuralNetwork, TwoLayerNeuralNetwork, Thre
 import pickle
 
 warnings.filterwarnings('ignore')
-base_dir = "/home/ubuntu/consensus_based_dl/data"
+base_dir = os.environ['ConsensusDLPath'] + "/data"
 
 # Todo: data loading should be done in another class
 # Todo: Make each model into a class and pass this into higher NNTrainer class
@@ -226,23 +226,72 @@ class NeuralNetworkCluster:
         optimizer0 = self.neuralNetDict[node_id]["optimizer"]
         optimizer1 = self.neuralNetDict[neighbor_node_id]["optimizer"]
         
+        # SGD
         # Wipe gradients of both optimizers
-        optimizer0.zero_grad()
-        optimizer1.zero_grad()
+        # optimizer0.zero_grad()
+        # optimizer1.zero_grad()
         
-        # Forward pass
-        y_pred0 = model0(model0.X_train)
-        y_pred1 = model1(model1.X_train)
+        # # Forward pass
+        # y_pred0 = model0(model0.X_train)
+
+        # y_pred1 = model1(model1.X_train)
         
-        y_pred0_2 = y_pred0.clone()
-        y_pred1_2 = y_pred1.clone()
+        # y_pred0_2 = y_pred0.clone()
+        # y_pred1_2 = y_pred1.clone()
         
-        y_pred_mean0 = (y_pred0 + y_pred1)/2
-        y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
-        # print('SHAPES', y_pred_mean0.shape, y_pred_mean1.shape)
-        # Compute Loss
-        loss0 = criterion0(y_pred_mean0.squeeze(), model0.y_train)
-        loss1 = criterion1(y_pred_mean1.squeeze(), model1.y_train)
+        # y_pred_mean0 = (y_pred0 + y_pred1)/2
+        # y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
+        # # print('SHAPES', y_pred_mean0.shape, y_pred_mean1.shape)
+        # # Compute Loss
+        # loss0 = torch.nn.CrossEntropyLoss(reduction='none')(y_pred_mean0.squeeze(), model0.y_train)
+        # loss1 = torch.nn.CrossEntropyLoss(reduction='none')(y_pred_mean1.squeeze(), model1.y_train)
+        # # print(loss0.shape, loss1.shape)
+
+        # # for idx, row in enumerate(model0.X_train):
+        # optimizer0.zero_grad()
+        # optimizer1.zero_grad()
+        # # Forward pass
+        # # y_pred0 = model0(row.reshape(-1, model0.X_train.shape[1]))        
+        # # Compute Loss
+        
+
+        # # loss0.backward()
+        # # optimizer0.step()
+        # # loss0.backward(retain_graph=True)
+        # # loss1.backward(retain_graph=True)
+
+        # loss0.backward(torch.ones_like(loss0),retain_graph=True)
+        # loss1.backward(torch.ones_like(loss1),retain_graph=True)
+        
+        # optimizer0.step()
+        # optimizer1.step()
+
+
+        # MINI BATCH
+        for idx in range(0,model0.X_train.shape[0], 64):
+            optimizer0.zero_grad()
+            optimizer1.zero_grad()
+        
+            y_pred0 = model0(model0.X_train[idx:idx+64])
+            y_pred1 = model1(model1.X_train[idx:idx+64])
+            y_pred0_2 = y_pred0.clone()
+            y_pred1_2 = y_pred1.clone()
+            y_pred_mean0 = (y_pred0 + y_pred1)/2
+            y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
+
+            loss0 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred_mean0.squeeze(), model0.y_train[idx:idx+64])
+            loss1 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred_mean1.squeeze(), model1.y_train[idx:idx+64])
+
+            loss0.backward(retain_graph=True)
+            loss1.backward(retain_graph=True)
+            
+            optimizer0.step()
+            optimizer1.step()
+
+
+        # loss0 = criterion0(y_pred_mean0.squeeze(), model0.y_train)
+        # loss1 = criterion1(y_pred_mean1.squeeze(), model1.y_train)
+
 
         # temp = criterion0(y_pred0.squeeze(), model0.y_train)
         # print('TEMP', temp.item())
@@ -265,11 +314,7 @@ class NeuralNetworkCluster:
         #         self.neuralNetDict[node_id]["converged_iters"] = 0
         # self.neuralNetDict[node_id]["prev_loss"] = loss0.item()
         # Backward pass
-        loss0.backward(retain_graph=True)
-        loss1.backward(retain_graph=True)
         
-        optimizer0.step()
-        optimizer1.step()
 
         # y_pred_test = model0(model0.X_test)
         # y_true_test = model0.y_test
@@ -337,7 +382,7 @@ class NeuralNetworkCluster:
             
             if self.n_classes <= 2:
 
-                train_auc_score = roc_auc_compute_fn(y_pred_train[:, 1], model.y_train)
+                train_auc_score = roc_auc_compute_fn(y_pred_train[:, 1].detach(), model.y_train)
             else:
                 train_auc_score = train_accuracy
 
@@ -358,7 +403,7 @@ class NeuralNetworkCluster:
             #losses.append(test_loss.item())
 
             if self.n_classes <= 2:
-                test_auc_score = roc_auc_compute_fn(y_pred_test[:, 1], model.y_test) 
+                test_auc_score = roc_auc_compute_fn(y_pred_test[:, 1].detach(), model.y_test) 
             else:
                 test_auc_score = test_accuracy
 
@@ -386,7 +431,7 @@ class NeuralNetworkCluster:
         overall_train_correct = np.equal(overall_train_output, model.y_train).sum()
         overall_train_accuracy = overall_train_correct/model.X_train.shape[0]
         if self.n_classes <= 2:
-            overall_train_auc = roc_auc_compute_fn(y_pred_train_agg_pyt, model.y_train)
+            overall_train_auc = roc_auc_compute_fn(y_pred_train_agg_pyt[:,1], model.y_train)
         else:
             overall_train_auc = overall_train_accuracy
 
@@ -397,7 +442,7 @@ class NeuralNetworkCluster:
         overall_test_accuracy = overall_test_correct/model.X_test.shape[0]
 
         if self.n_classes <= 2:
-            overall_test_auc = roc_auc_compute_fn(y_pred_test_agg_pyt, model.y_test)
+            overall_test_auc = roc_auc_compute_fn(y_pred_test_agg_pyt[:,1], model.y_test)
         else:
             overall_test_auc = overall_test_accuracy
         
@@ -428,19 +473,28 @@ class NeuralNetworkCluster:
         #     print("Node {} has converged.".format(node_id))
         #     self.neuralNetDict[node_id]["converged_flag"] = "true"
         #     return
+
         print("node_id", node_id)
-        print("centralized training")
+        print("Centralized training")
         model0 = self.neuralNetDict[node_id]["model"]
         criterion0 = self.neuralNetDict[node_id]["criterion"]        
         optimizer0 = self.neuralNetDict[node_id]["optimizer"]        
-        # Wipe gradients of both optimizer
-        #print(model0.y_train.shape)
-        for idx, row in enumerate(model0.X_train):
+        
+        # SGD
+        #y_pred0 = model0(model0.X_train)
+        #
+        #
+        # loss0 = torch.nn.CrossEntropyLoss(reduction='none')(y_pred0.squeeze(), model0.y_train)
+        #
+        # loss0.backward(torch.ones_like(loss0),retain_graph=True)
+        # optimizer0.step()
+
+        # BATCH
+        for idx in range(0,model0.X_train.shape[0], 64):
             optimizer0.zero_grad()
-        # Forward pass
-            y_pred0 = model0(row.reshape(-1, model0.X_train.shape[1]))        
-        # Compute Loss
-            loss0 = criterion0(y_pred0, model0.y_train[idx].unsqueeze(0))
+        
+            y_pred0 = model0(model0.X_train[idx:idx+64])        
+            loss0 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred0.squeeze(), model0.y_train[idx:idx+64])
             loss0.backward()
             optimizer0.step()
 

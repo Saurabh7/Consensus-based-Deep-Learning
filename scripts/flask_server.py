@@ -29,7 +29,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]=""
 app = Flask(__name__)
 
 # This dictionary will store all the neural networks
-base_dir =  "/home/ubuntu/consensus_based_dl/data"
+base_dir =  os.environ['ConsensusDLPath'] + "/data"
 nn_cluster = NeuralNetworkCluster(base_dir)
 run_time = 0
 start_time = 0

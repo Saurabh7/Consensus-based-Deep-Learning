@@ -211,6 +211,7 @@ class TwoLayerNeuralNetwork(torch.nn.Module):
 
     def forward(self, x):
         hidden1 = self.fc1(x)
+        hidden1 = self.dropout(hidden1)
         act1 = self.hidden_act_func(hidden1)
         hidden2 = self.fc2(act1)
         act2 = self.hidden_act_func(hidden2)
@@ -248,6 +249,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
         self.hidden_size2 = nn_config_dict["numhidden_2"]
         self.hidden_size3 = nn_config_dict["numhidden_3"]
         self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size1)
+        self.dropout = torch.nn.Dropout(p=0.2)
 
         # Define the activation functions to be used
         self.tanh = torch.nn.Tanh()
@@ -283,6 +285,7 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
 
     def forward(self, x):
         hidden1 = self.fc1(x)
+        hidden1 = self.dropout(hidden1)
         act1 = self.hidden_act_func(hidden1)
         hidden2 = self.fc2(act1)
         act2 = self.hidden_act_func(hidden2)

@@ -32,7 +32,7 @@ for dataset in ['mnist']:#['arcene', 'dexter', 'gisette', 'madelon', 'HT', 'mnis
 
 	print("Completed: {}".format(completed_result_ids))
 
-	runnable_config_ids = [cid for cid in config_ids if int(cid) in [i for i in [2]]]#config_ids.difference(completed_result_ids)
+	runnable_config_ids = [cid for cid in config_ids if int(cid) in [i for i in [1]]]#config_ids.difference(completed_result_ids)
 
 	config_paths = [os.path.join(base_config_path, f) for f in config_files]
 	for cid in runnable_config_ids:

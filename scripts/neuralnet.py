@@ -266,27 +266,73 @@ class NeuralNetworkCluster:
         # optimizer0.step()
         # optimizer1.step()
 
+        # SGD
+        # for idx in range(0,model0.X_train.shape[0], 64):
+
+
+        # Local Update
+        random_sample = random.randint(0, model0.X_train.shape[0])
+        optimizer0.zero_grad()
+        optimizer1.zero_grad()
+    
+        y_pred0sample = model0.forward(model0.X_train[random_sample:random_sample+1])
+        y_pred1sample = model1.forward(model1.X_train[random_sample:random_sample+1])
+
+        loss0sample = torch.nn.CrossEntropyLoss()(y_pred0sample, model0.y_train[random_sample:random_sample+1])
+        loss1sample = torch.nn.CrossEntropyLoss()(y_pred1sample, model1.y_train[random_sample:random_sample+1])
+
+        loss0sample.backward()
+        loss1sample.backward()
+
+        optimizer0.step()
+        optimizer1.step()
+
+        optimizer0.zero_grad()
+        optimizer1.zero_grad()
+ 
+
+        # Gossip Update
+        random_sample2= random.randint(0, model0.X_train.shape[0])
+
+        y_pred0 = model0.forward(model0.X_train[random_sample2:random_sample2+1])
+        y_pred1 = model1.forward(model1.X_train[random_sample2:random_sample2+1])
+
+        y_pred0_2 = y_pred0.clone()
+        y_pred1_2 = y_pred1.clone()
+        y_pred_mean0 = (y_pred0 + y_pred1)/2
+        y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
+
+        loss0 = torch.nn.CrossEntropyLoss()(y_pred_mean0, model0.y_train[random_sample2:random_sample2+1])
+        loss1 = torch.nn.CrossEntropyLoss()(y_pred_mean1, model1.y_train[random_sample2:random_sample2+1])
+
+        loss0.backward(retain_graph=True)
+        loss1.backward(retain_graph=True)
+        
+        optimizer0.step()
+        optimizer1.step()
+
+
 
         # MINI BATCH
-        for idx in range(0,model0.X_train.shape[0], 64):
-            optimizer0.zero_grad()
-            optimizer1.zero_grad()
+        # for idx in range(0,model0.X_train.shape[0], 64):
+        #     optimizer0.zero_grad()
+        #     optimizer1.zero_grad()
         
-            y_pred0 = model0(model0.X_train[idx:idx+64])
-            y_pred1 = model1(model1.X_train[idx:idx+64])
-            y_pred0_2 = y_pred0.clone()
-            y_pred1_2 = y_pred1.clone()
-            y_pred_mean0 = (y_pred0 + y_pred1)/2
-            y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
+        #     y_pred0 = model0(model0.X_train[idx:idx+64])
+        #     y_pred1 = model1(model1.X_train[idx:idx+64])
+        #     y_pred0_2 = y_pred0.clone()
+        #     y_pred1_2 = y_pred1.clone()
+        #     y_pred_mean0 = (y_pred0 + y_pred1)/2
+        #     y_pred_mean1 = (y_pred0_2 + y_pred1_2)/2
 
-            loss0 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred_mean0.squeeze(), model0.y_train[idx:idx+64])
-            loss1 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred_mean1.squeeze(), model1.y_train[idx:idx+64])
+        #     loss0 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred_mean0.squeeze(), model0.y_train[idx:idx+64])
+        #     loss1 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred_mean1.squeeze(), model1.y_train[idx:idx+64])
 
-            loss0.backward(retain_graph=True)
-            loss1.backward(retain_graph=True)
+        #     loss0.backward(retain_graph=True)
+        #     loss1.backward(retain_graph=True)
             
-            optimizer0.step()
-            optimizer1.step()
+        #     optimizer0.step()
+        #     optimizer1.step()
 
 
         # loss0 = criterion0(y_pred_mean0.squeeze(), model0.y_train)
@@ -481,22 +527,31 @@ class NeuralNetworkCluster:
         optimizer0 = self.neuralNetDict[node_id]["optimizer"]        
         
         # SGD
-        #y_pred0 = model0(model0.X_train)
-        #
-        #
+        # y_pred0 = model0(model0.X_train)
+        # #
+        # #
         # loss0 = torch.nn.CrossEntropyLoss(reduction='none')(y_pred0.squeeze(), model0.y_train)
-        #
+        # #
         # loss0.backward(torch.ones_like(loss0),retain_graph=True)
         # optimizer0.step()
 
+        idx = random.randint(0, model0.X_train.shape[0])
+        optimizer0.zero_grad()
+        y_pred0 = model0.forward(model0.X_train[idx:idx+1])    
+        loss0 = torch.nn.CrossEntropyLoss()(y_pred0, model0.y_train[idx:idx+1])
+        loss0.backward()
+        optimizer0.step()
+
+
+
         # BATCH
-        for idx in range(0,model0.X_train.shape[0], 64):
-            optimizer0.zero_grad()
+        # for idx in range(0,model0.X_train.shape[0], 64):
+        #     optimizer0.zero_grad()
         
-            y_pred0 = model0(model0.X_train[idx:idx+64])        
-            loss0 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred0.squeeze(), model0.y_train[idx:idx+64])
-            loss0.backward()
-            optimizer0.step()
+        #     y_pred0 = model0(model0.X_train[idx:idx+64])        
+        #     loss0 = torch.nn.CrossEntropyLoss(reduction='mean')(y_pred0.squeeze(), model0.y_train[idx:idx+64])
+        #     loss0.backward()
+        #     optimizer0.step()
 
         # If the abs diff between current loss and previous loss < convergence_epsilon
         # if self.neuralNetDict[node_id]["prev_loss"] is None:

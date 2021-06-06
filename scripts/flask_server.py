@@ -97,21 +97,24 @@ def updateWPProject(command):
                         nn_cluster.appendNNToCluster(nnconfig_dict)
                     
                     if command == "train":
-                        epoch += 1
+                        # epoch += 1
+                        # print('Training')
                         if epoch % 50 == 0:
-                            print("GPU MEMORY ALLOCATED at epoch {}: {}".format(epoch, torch.cuda.memory_allocated()))
-                            print("CPU MEMORY USED: {}".format(dict(psutil.virtual_memory()._asdict()))) 
-                            print("Clearing tensors and collecting garbage...")
+                            # print("GPU MEMORY ALLOCATED at epoch {}: {}".format(epoch, torch.cuda.memory_allocated()))
+                            # print("CPU MEMORY USED: {}".format(dict(psutil.virtual_memory()._asdict()))) 
+                            # print("Clearing tensors and collecting garbage...")
                             import gc
                             gc.collect()
-                            torch.cuda.empty_cache()
+                            # torch.cuda.empty_cache()
                         nn_cluster.train(nnconfig_dict["node_id"])
                         #Return the converged flag of this particular neural net
                         return jsonify(nn_cluster.neuralNetDict[nnconfig_dict["node_id"]]["converged_flag"])
                         
                     if command == "calc_losses":
+                        # print('Calc Loss')
                         epoch += 1
-                        nn_cluster.compute_losses_and_accuracies()
+                        if epoch % 100 == 0:
+                            nn_cluster.compute_losses_and_accuracies()
                         # Save weights
                         # if save_weights:
                         #     weights_save_dir = os.path.join(base_dir, nnconfig_dict['resourcepath'], 'results', 'weights_{0}'.format(nnconfig_dict['run']))
@@ -150,22 +153,22 @@ def updateWPProject(command):
                             converged_flags = nn_cluster.neuralNetDict[node_id]["converged_flags"]
                             fc1_weight = nn_cluster.neuralNetDict[node_id]["fc1_weight"]
 
-                            nodes = [node_id]*len(train_losses)
-                            iters = list(range(len(train_losses)))
-                            run_times = [run_time] + [None]*(len(train_losses)-1)
+                            nodes = [node_id]*len(overall_test_aucs)
+                            iters = list(range(len(overall_test_aucs)))
+                            run_times = [run_time] + [None]*(len(overall_test_aucs)-1)
 
                             # Create results dataframe
                             df = pd.DataFrame(data={"node": nodes, "iter": iters, 
-                                                    "train_loss": train_losses, "test_loss":test_losses,
-                                                    "train_accuracy":train_accuracies, "test_accuracy":test_accuracies,
-                                                    "converged_state":converged_states,
+                                                    # "train_loss": train_losses, "test_loss":test_losses,
+                                                    # "train_accuracy":train_accuracies, "test_accuracy":test_accuracies,
+                                                    # "converged_state":converged_states,
                                                     "overall_train_accuracy": overall_train_accuracies, 
                                                     "overall_test_accuracy": overall_test_accuracies,
                                                     "overall_train_auc": overall_train_aucs,
                                                     "overall_test_auc": overall_test_aucs,
-                                                    "run_time": run_times,
-                                                    "converged_flags": converged_flags,
-                                                    "fc1_weight": fc1_weight
+                                                    # "run_time": run_times,
+                                                    # "converged_flags": converged_flags,
+                                                    # "fc1_weight": fc1_weight
                                                     })
                             loss_df = loss_df.append(df)
                             
@@ -175,7 +178,7 @@ def updateWPProject(command):
                         
                         f_path = os.path.join(o_path, 'results_{0}.csv'.format(nnconfig_dict['run']))
                         loss_df.to_csv(f_path, index=False)
-                        print(nnconfig_dict['run'])
+                        # print(nnconfig_dict['run'])
 #                        shutdown_server()
                         
                     if command == "gossip":

@@ -432,11 +432,11 @@ class NeuralNetworkCluster:
             else:
                 train_auc_score = train_accuracy
 
-            self.neuralNetDict[node_id]["train_losses"].append(train_loss.item())
-            self.neuralNetDict[node_id]["train_accuracy"].append(train_accuracy.item())
-            self.neuralNetDict[node_id]["train_auc"].append(train_auc_score.item())
+            # self.neuralNetDict[node_id]["train_losses"].append(train_loss.item())
+            # self.neuralNetDict[node_id]["train_accuracy"].append(train_accuracy.item())
+            # self.neuralNetDict[node_id]["train_auc"].append(train_auc_score.item())
             # print('Shape:', model.fc1.weight.shape)
-            self.neuralNetDict[node_id]["fc1_weight"].append(torch.square(model.fc1.weight).sum().item())
+            # self.neuralNetDict[node_id]["fc1_weight"].append(torch.square(model.fc1.weight).sum().item())
             # print(node_id, self.neuralNetDict[node_id]["fc1_weight"][-1])
             # Compute Test Loss
             y_pred_test = model(model.X_test)
@@ -453,12 +453,12 @@ class NeuralNetworkCluster:
             else:
                 test_auc_score = test_accuracy
 
-            self.neuralNetDict[node_id]["test_losses"].append(test_loss.item())
-            self.neuralNetDict[node_id]["test_accuracy"].append(test_accuracy.item())
-            self.neuralNetDict[node_id]["test_auc"].append(test_auc_score.item())
+            # self.neuralNetDict[node_id]["test_losses"].append(test_loss.item())
+            # self.neuralNetDict[node_id]["test_accuracy"].append(test_accuracy.item())
+            # self.neuralNetDict[node_id]["test_auc"].append(test_auc_score.item())
             
-            self.neuralNetDict[node_id]["converged_states"].append(self.neuralNetDict[node_id]["converged_iters"])
-            self.neuralNetDict[node_id]["converged_flags"].append(self.neuralNetDict[node_id]["converged_flag"])
+            # self.neuralNetDict[node_id]["converged_states"].append(self.neuralNetDict[node_id]["converged_iters"])
+            # self.neuralNetDict[node_id]["converged_flags"].append(self.neuralNetDict[node_id]["converged_flag"])
             
 
             y_pred_train_agg.append(y_pred_train.detach().numpy())
@@ -520,8 +520,8 @@ class NeuralNetworkCluster:
         #     self.neuralNetDict[node_id]["converged_flag"] = "true"
         #     return
 
-        print("node_id", node_id)
-        print("Centralized training")
+        # print("node_id", node_id)
+        # print("Centralized training")
         model0 = self.neuralNetDict[node_id]["model"]
         criterion0 = self.neuralNetDict[node_id]["criterion"]        
         optimizer0 = self.neuralNetDict[node_id]["optimizer"]        

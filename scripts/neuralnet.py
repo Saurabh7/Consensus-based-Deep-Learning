@@ -436,7 +436,7 @@ class NeuralNetworkCluster:
             # self.neuralNetDict[node_id]["train_accuracy"].append(train_accuracy.item())
             # self.neuralNetDict[node_id]["train_auc"].append(train_auc_score.item())
             # print('Shape:', model.fc1.weight.shape)
-            # self.neuralNetDict[node_id]["fc1_weight"].append(torch.square(model.fc1.weight).sum().item())
+            self.neuralNetDict[node_id]["fc1_weight"].append(model.get_weight())
             # print(node_id, self.neuralNetDict[node_id]["fc1_weight"][-1])
             # Compute Test Loss
             y_pred_test = model(model.X_test)

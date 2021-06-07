@@ -160,6 +160,10 @@ class SingleLayerNeuralNetwork(torch.nn.Module):
         self.X_test = X_test.float()
         self.y_test = y_test.long()
 
+    def get_weight(self):
+
+        return torch.square(self.fc1.weight).sum().item()
+
 
 class TwoLayerNeuralNetwork(torch.nn.Module):
     def __init__(self, n_classes=2):
@@ -231,6 +235,11 @@ class TwoLayerNeuralNetwork(torch.nn.Module):
         self.y_train = y_train.long()
         self.X_test = X_test.float()
         self.y_test = y_test.long()
+
+    def get_weight(self):
+
+        return torch.square(self.fc1.weight).sum().item() + torch.square(
+            self.fc2.weight).sum().item()
 
 
 class ThreeLayerNeuralNetwork(torch.nn.Module):
@@ -308,6 +317,12 @@ class ThreeLayerNeuralNetwork(torch.nn.Module):
         self.y_train = y_train.long()
         self.X_test = X_test.float()
         self.y_test = y_test.long()
+   
+    def get_weight(self):
+
+        return torch.square(self.fc1.weight).sum().item() + torch.square(
+            self.fc2.weight).sum().item() + torch.square(
+            self.fc3.weight).sum().item()
 
 class FourLayerNeuralNetwork(torch.nn.Module):
     def __init__(self, n_classes=2):
@@ -390,4 +405,10 @@ class FourLayerNeuralNetwork(torch.nn.Module):
         self.X_test = X_test.float()
         self.y_test = y_test.long()
 
+    def get_weight(self):
+
+        return torch.square(self.fc1.weight).sum().item() + torch.square(
+            self.fc2.weight).sum().item() + torch.square(
+            self.fc3.weight).sum().item() + torch.square(
+            self.fc4.weight).sum().item()
 

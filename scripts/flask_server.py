@@ -113,7 +113,7 @@ def updateWPProject(command):
                     if command == "calc_losses":
                         # print('Calc Loss')
                         epoch += 1
-                        if epoch % 100 == 0:
+                        if epoch % 1000 == 0:
                             nn_cluster.compute_losses_and_accuracies()
                         # Save weights
                         # if save_weights:
@@ -168,7 +168,7 @@ def updateWPProject(command):
                                                     "overall_test_auc": overall_test_aucs,
                                                     # "run_time": run_times,
                                                     # "converged_flags": converged_flags,
-                                                    # "fc1_weight": fc1_weight
+                                                    "fc1_weight": fc1_weight
                                                     })
                             loss_df = loss_df.append(df)
                             

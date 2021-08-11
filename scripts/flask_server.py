@@ -113,7 +113,7 @@ def updateWPProject(command):
                     if command == "calc_losses":
                         # print('Calc Loss')
                         epoch += 1
-                        if epoch % 1000 == 0:
+                        if epoch % 100 == 0:
                             nn_cluster.compute_losses_and_accuracies()
                         # Save weights
                         # if save_weights:

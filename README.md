@@ -1,10 +1,14 @@
-Consensus DL.
 
-Steps:
 
-1.  Peersim -> Generate graph
+This repository contains the code used in the paper:
+[Consensus Based Vertically Partitioned Multi-layer Perceptrons for Edge Computing
+](https://link.springer.com/chapter/10.1007/978-3-030-88942-5_20) published at International Conference on Discovery Science 2021.
 
-2.  Flask server -> Data processing, Models, Gossip
+Steps to run experiments:
+
+1.  Peersim -> Used for generating graph
+
+2.  Flask server -> Used for Data processing, Models, Gossip of network loss
 
 The peersim configs should be present in `config` folder and the datasets in `data` folder in the base directory.
 
